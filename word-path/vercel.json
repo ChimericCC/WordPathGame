@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/room.js": { "includeFiles": "words.txt", "maxDuration": 10 }
+  },
+  "rewrites": [
+    { "source": "/play/:code", "destination": "/index.html" },
+    { "source": "/demo", "destination": "/index.html" },
+    { "source": "/rules", "destination": "/index.html" }
+  ]
+}

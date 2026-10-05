@@ -1,0 +1,1093 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Word Path</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='2' width='28' height='28' rx='7' fill='%2335c4ff'/%3E%3Ctext x='16' y='23' font-family='Arial Black' font-size='19' text-anchor='middle' fill='%23050817'%3EW%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Russo+One&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #050817;
+  --deck: #0a1230;
+  --deck-2: #0e1940;
+  --line: #1c2c62;
+  --ink: #e8f1ff;
+  --muted: #8a9ad0;
+  --blue: #35c4ff;
+  --blue-deep: #0b6fd6;
+  --pink: #ff3da8;
+  --pink-deep: #c4127a;
+  --violet: #9b5cff;
+  --gold: #ffb627;
+  --bad: #ff6b5a;
+  --good: #5dffb0;
+  --cell: clamp(15px, min(calc((100vh - 250px) / 28), calc((100vw - 640px) / 28)), 30px);
+  --ui: 'Chakra Petch', system-ui, sans-serif;
+  --display: 'Russo One', 'Arial Black', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(53,196,255,.14), transparent 60%),
+    radial-gradient(1000px 600px at 110% 110%, rgba(255,61,168,.14), transparent 60%),
+    var(--void);
+  color: var(--ink); font-family: var(--ui); font-size: 15px; line-height: 1.45;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+a { color: var(--blue); }
+.hidden { display: none !important; }
+
+/* ---------- shared bits */
+.btn {
+  border: 1px solid var(--line); background: var(--deck-2); border-radius: 10px;
+  padding: 9px 14px; font-weight: 600; letter-spacing: .01em; transition: border-color .15s, background .15s;
+}
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+a.btn { text-decoration: none; color: var(--ink); display: inline-block; }
+.btn.primary { background: linear-gradient(180deg, #4fd0ff, var(--blue-deep)); border-color: #7fdcff; color: #03132b; }
+.btn.magenta { background: linear-gradient(180deg, #ff6cc0, var(--pink-deep)); border-color: #ff9dd4; color: #2b0318; }
+.btn.danger { border-color: rgba(255,107,90,.6); color: #ffc2b9; }
+.btn.small { padding: 6px 10px; font-size: 13px; }
+.field { display: grid; gap: 6px; }
+.field label { color: var(--muted); font-size: 13px; }
+.input {
+  background: #070d26; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%;
+}
+.input:focus { border-color: var(--blue); outline: none; }
+.code-input { font-family: var(--display); font-size: 22px; letter-spacing: .25em; text-transform: uppercase; }
+
+.tile {
+  --c1: #3a4a86; --c2: #1a2458; --rim: #6e80c7;
+  display: inline-grid; place-items: center; font-family: var(--display); color: #fff;
+  background: linear-gradient(160deg, var(--c1), var(--c2));
+  border: 1px solid var(--rim); border-radius: 22%;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -2px 0 rgba(0,0,0,.35), 0 2px 0 rgba(0,0,0,.4);
+  text-shadow: 0 1px 0 rgba(0,0,0,.35);
+}
+.tile.blue { --c1: #3fc9ff; --c2: #0a5fc4; --rim: #9be6ff; box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -2px 0 rgba(0,0,0,.3), 0 0 10px rgba(53,196,255,.55); }
+.tile.pink { --c1: #ff5fbd; --c2: #a80f68; --rim: #ffaadb; box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -2px 0 rgba(0,0,0,.3), 0 0 10px rgba(255,61,168,.55); }
+
+/* ---------- home */
+#home { min-height: 100vh; display: grid; place-items: center; padding: 32px 16px; }
+.home-wrap { width: min(920px, 100%); display: grid; gap: 36px; }
+.logo { display: grid; gap: 10px; justify-items: center; }
+.logo-row { display: flex; gap: 8px; }
+.logo-row .tile { width: clamp(46px, 9vw, 74px); height: clamp(46px, 9vw, 74px); font-size: clamp(26px, 5vw, 42px); }
+.logo-row.second { margin-left: clamp(46px, 9vw, 74px); }
+.tagline { color: var(--muted); text-align: center; margin: 4px 0 0; }
+.home-cards { display: grid; grid-template-columns: 1.15fr 1fr; gap: 18px; }
+.card {
+  background: linear-gradient(180deg, rgba(14,25,64,.92), rgba(10,18,48,.92));
+  border: 1px solid var(--line); border-radius: 18px; padding: 22px; display: grid; gap: 14px; align-content: start;
+}
+.card h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 20px; letter-spacing: .02em; }
+.card p { margin: 0; color: var(--muted); }
+.card.create { border-color: rgba(53,196,255,.45); box-shadow: 0 0 40px rgba(53,196,255,.08); }
+.card.join { border-color: rgba(255,61,168,.4); box-shadow: 0 0 40px rgba(255,61,168,.07); }
+.home-links { display: flex; gap: 22px; justify-content: center; }
+.home-links a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 2px; }
+.home-links a:hover { color: var(--ink); border-color: var(--ink); }
+.form-error { color: var(--bad); font-size: 14px; min-height: 1.2em; margin: 0; }
+@media (max-width: 720px) { .home-cards { grid-template-columns: 1fr; } }
+
+/* ---------- game shell */
+#game { min-height: 100vh; display: grid; grid-template-rows: auto 1fr; }
+.topbar { display: flex; align-items: center; gap: 14px; padding: 10px 18px; border-bottom: 1px solid var(--line); background: rgba(5,8,23,.7); backdrop-filter: blur(6px); }
+.wordmark { font-family: var(--display); font-size: 20px; text-decoration: none; color: var(--ink); letter-spacing: .03em; }
+.wordmark span:first-child { color: var(--blue); } .wordmark span:last-child { color: var(--pink); }
+.topbar .spacer { flex: 1; }
+.room-chip { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+.room-chip b { font-family: var(--display); color: var(--ink); letter-spacing: .15em; font-weight: 400; }
+
+.arena { display: grid; grid-template-columns: 250px auto 250px; gap: 18px; justify-content: center; align-items: start; padding: 16px; }
+@media (max-width: 1180px) {
+  :root { --cell: clamp(11px, calc((100vw - 28px) / 28), 26px); }
+  .arena { grid-template-columns: 1fr 1fr; }
+  .board-col { grid-column: 1 / -1; order: -1; }
+}
+
+/* player panels */
+.panel {
+  border: 1px solid var(--line); border-radius: 16px; padding: 14px; background: rgba(10,18,48,.85);
+  display: grid; gap: 12px; position: relative; transition: box-shadow .3s, border-color .3s;
+}
+.panel.p1 { --pc: var(--blue); } .panel.p2 { --pc: var(--pink); }
+.panel.active { border-color: var(--pc); box-shadow: 0 0 0 1px var(--pc), 0 0 28px color-mix(in srgb, var(--pc) 35%, transparent); }
+.panel-head { display: flex; align-items: center; gap: 10px; }
+.avatar { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-family: var(--display); color: #050817; background: var(--pc); box-shadow: 0 0 14px var(--pc); flex: none; }
+.pname { font-weight: 700; font-size: 16px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proute { color: var(--pc); font-family: var(--display); font-size: 14px; letter-spacing: .04em; }
+.you-tag { font-size: 11px; border: 1px solid var(--pc); color: var(--pc); border-radius: 99px; padding: 1px 7px; margin-left: 6px; vertical-align: 2px; }
+.timer { font-family: var(--display); font-size: 34px; line-height: 1; color: var(--pc); text-shadow: 0 0 14px color-mix(in srgb, var(--pc) 60%, transparent); }
+.timer.low { color: var(--bad); text-shadow: 0 0 14px rgba(255,107,90,.7); }
+.timer.idle { color: var(--muted); text-shadow: none; font-size: 15px; font-family: var(--ui); }
+.stat { display: grid; gap: 5px; }
+.stat-row { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; }
+.stat-row b { color: var(--ink); font-weight: 600; }
+.meter { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
+.meter i { height: 8px; border-radius: 2px; background: #18234d; }
+.meter i.cap { background: color-mix(in srgb, var(--pc) 35%, #18234d); }
+.meter i.full { background: var(--pc); box-shadow: 0 0 6px var(--pc); }
+.reach { font-size: 13px; color: var(--muted); }
+.reach b { color: var(--ink); }
+.reach.win b { color: var(--good); }
+
+/* board */
+.board-col { display: grid; gap: 12px; justify-items: center; }
+.board-wrap {
+  position: relative; padding: 8px; border-radius: 16px;
+  background: linear-gradient(180deg, #0b1538, #070d26); border: 1px solid #22356f;
+  box-shadow: 0 0 0 1px rgba(53,196,255,.08), 0 30px 80px rgba(0,0,0,.5);
+}
+.board { display: grid; grid-template-columns: repeat(28, var(--cell)); grid-template-rows: repeat(28, var(--cell)); user-select: none; }
+.lbl { display: grid; place-items: center; font-size: calc(var(--cell) * .42); color: #5a6aa3; font-weight: 600; }
+.cell {
+  position: relative; display: grid; place-items: center;
+  border-right: 1px solid rgba(40,62,130,.45); border-bottom: 1px solid rgba(40,62,130,.45);
+  background: rgba(13,25,66,.55); cursor: pointer;
+}
+.cell.edge-l { border-left: 1px solid rgba(40,62,130,.45); } .cell.edge-t { border-top: 1px solid rgba(40,62,130,.45); }
+.cell:hover { background: rgba(53,196,255,.12); }
+.cell .t {
+  position: absolute; inset: 1px; display: grid; place-items: center; z-index: 2;
+  font-family: var(--display); font-size: calc(var(--cell) * .58); color: #fff; border-radius: 22%;
+  border: 1px solid #8494d4; background: linear-gradient(160deg, #46548e, #222c63);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -2px 0 rgba(0,0,0,.35);
+}
+.cell.own-p1 .t { border-color: #9be6ff; background: linear-gradient(160deg, #3fc9ff, #0a5fc4); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 0 8px rgba(53,196,255,.65); }
+.cell.own-p2 .t { border-color: #ffaadb; background: linear-gradient(160deg, #ff5fbd, #a80f68); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 0 8px rgba(255,61,168,.65); }
+.cell.own-both .t { border-color: #e0c4ff; background: linear-gradient(135deg, #2fb5f2 0 49%, #e8299a 51% 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), -3px 0 8px rgba(53,196,255,.5), 3px 0 8px rgba(255,61,168,.5); }
+.cell .t.wild::after { content: ''; position: absolute; right: 2px; top: 2px; width: 4px; height: 4px; border-radius: 50%; background: var(--gold); }
+.cell.locked .t { opacity: .75; border-style: dashed; }
+.cell.preview .t { background: rgba(232,241,255,.12); border: 1.5px dashed var(--ink); box-shadow: none; }
+.cell.preview.ok .t { border-color: var(--good); color: var(--good); }
+.cell.preview.bad .t { border-color: var(--bad); color: #ffd1ca; }
+.cell.cursor { outline: 2px solid var(--ink); outline-offset: -2px; z-index: 3; }
+.cell.cursor::after {
+  content: attr(data-arrow); position: absolute; z-index: 4; font-size: calc(var(--cell) * .55); color: var(--ink);
+  right: calc(var(--cell) * -.55); top: 50%; transform: translateY(-50%); pointer-events: none;
+}
+.cell.cursor[data-arrow="↑"]::after { right: auto; left: 50%; top: calc(var(--cell) * -.6); transform: translateX(-50%); }
+.cell.del-pick .t { outline: 2px solid var(--bad); outline-offset: 1px; filter: saturate(.6) brightness(.9); }
+.cell.pop .t { animation: pop .45s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes pop { 0% { transform: translateY(0) scale(.6); } 60% { transform: translateY(-4px) scale(1.08); } 100% { transform: none; } }
+
+.cell .sp { width: 76%; height: 76%; display: block; }
+.cell .sp.inv { color: var(--violet); filter: drop-shadow(0 0 4px rgba(155,92,255,.9)); }
+.cell .sp.star { color: var(--gold); filter: drop-shadow(0 0 4px rgba(255,182,39,.9)); }
+.cell.special-inv { background: rgba(155,92,255,.16); }
+.cell.special-star { background: rgba(255,182,39,.12); }
+.cell .sp { animation: shimmer 3.2s ease-in-out infinite; }
+@keyframes shimmer { 50% { opacity: .55; } }
+
+.cell .mark { position: absolute; inset: -1px; border: 2px solid var(--mc); border-radius: 50%; z-index: 1; box-shadow: 0 0 10px var(--mc); }
+.cell .mark-lbl { font-size: calc(var(--cell) * .34); color: var(--mc); font-weight: 700; z-index: 1; }
+.cell.m-p1 { --mc: var(--blue); } .cell.m-p2 { --mc: var(--pink); }
+.cell.m-end .mark { border-style: dashed; }
+
+.cell.path .t { animation: surge 1.6s ease-in-out infinite; animation-delay: calc(var(--i) * 45ms); }
+@keyframes surge { 0%, 100% { filter: brightness(1); } 40% { filter: brightness(1.35) drop-shadow(0 0 5px rgba(255,255,255,.8)); } }
+
+.path-svg { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 5; overflow: visible; }
+.path-svg .glow { fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: .45; filter: blur(4px); }
+.path-svg .core { fill: none; stroke: #ffffff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: .9;
+  stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: draw 1.8s ease-out forwards; }
+.path-svg .pulse { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 60 var(--len); stroke-dashoffset: calc(var(--len) + 60); animation: run 2.4s linear 1.6s infinite; filter: drop-shadow(0 0 6px #fff); }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes run { to { stroke-dashoffset: 0; } }
+
+/* overlays on the board */
+.board-overlay { position: absolute; inset: 0; display: grid; place-items: center; z-index: 10; background: rgba(5,8,23,.6); border-radius: 16px; padding: 16px; }
+.overlay-card { width: min(420px, 100%); text-align: center; }
+.overlay-card .card { text-align: left; }
+.big-code { font-family: var(--display); font-size: 40px; letter-spacing: .25em; text-align: center; color: var(--ink); text-shadow: 0 0 18px rgba(53,196,255,.6); }
+.link-row { display: flex; gap: 8px; }
+.link-row .input { font-size: 13px; }
+.seat-list { display: grid; gap: 6px; }
+.seat { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.seat i { width: 10px; height: 10px; border-radius: 50%; background: #2a3666; }
+.seat.on.p1 i { background: var(--blue); box-shadow: 0 0 8px var(--blue); }
+.seat.on.p2 i { background: var(--pink); box-shadow: 0 0 8px var(--pink); }
+.seat.on { color: var(--ink); }
+
+.banner { text-align: center;
+  padding: 12px 20px; border-radius: 14px; background: rgba(5,8,23,.88); border: 1px solid var(--bc); box-shadow: 0 0 30px color-mix(in srgb, var(--bc) 50%, transparent);
+  display: grid; gap: 8px; justify-items: center; }
+.banner h3 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 22px; color: var(--bc); }
+.banner p { margin: 0; color: var(--muted); font-size: 14px; }
+.banner .row { display: flex; gap: 8px; }
+
+/* action area */
+.hud { width: 100%; max-width: calc(var(--cell) * 28 + 18px); display: grid; gap: 10px; }
+.status { display: flex; align-items: baseline; gap: 10px; min-height: 24px; flex-wrap: wrap; }
+.status .msg { font-weight: 600; }
+.status .sub { color: var(--muted); font-size: 14px; }
+.status .err { color: var(--bad); font-size: 14px; }
+.formed { display: flex; gap: 6px; flex-wrap: wrap; }
+.formed span { font-family: var(--display); font-size: 13px; padding: 2px 8px; border-radius: 6px; border: 1px solid; letter-spacing: .05em; }
+.formed .y { color: var(--good); border-color: rgba(93,255,176,.45); }
+.formed .n { color: var(--bad); border-color: rgba(255,107,90,.5); }
+
+.rack { display: flex; flex-wrap: wrap; gap: 6px; min-height: 48px; padding: 8px; border-radius: 14px; background: rgba(10,18,48,.85); border: 1px solid var(--line); }
+.rack .tile { width: 40px; height: 40px; font-size: 21px; border-width: 1px; transition: transform .12s, opacity .12s; }
+.rack .tile:hover:not(:disabled) { transform: translateY(-3px); }
+.rack .tile.used { opacity: .22; transform: none; }
+.rack .tile.sel { outline: 2px solid #fff; outline-offset: 2px; transform: translateY(-4px); }
+.rack .tile.ex { outline: 2px solid var(--gold); outline-offset: 2px; transform: translateY(-4px); }
+.rack .tile.wildt { --c1: #ffd36b; --c2: #c97a00; --rim: #ffe6a8; color: #3a2100; text-shadow: none; }
+.rack .empty-slot { width: 40px; height: 40px; border-radius: 22%; border: 1px dashed #26366e; }
+.rack-note { color: var(--muted); font-size: 13px; align-self: center; padding: 0 6px; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.controls .grow { flex: 1; }
+.dir-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.dir-toggle button { border: 0; background: transparent; padding: 8px 12px; font-weight: 600; color: var(--muted); }
+.dir-toggle button[aria-pressed="true"] { background: var(--deck-2); color: var(--ink); }
+.mode-box { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px; border: 1px dashed var(--line); border-radius: 12px; }
+.mode-box select { background: #070d26; border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+.hint { color: var(--muted); font-size: 13px; }
+kbd { font-family: var(--ui); font-size: 12px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; color: var(--ink); }
+
+.log { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.log div:last-child { color: var(--ink); }
+.legend { display: grid; gap: 8px; font-size: 13px; color: var(--muted); }
+.legend div { display: flex; gap: 8px; align-items: center; }
+.legend svg { width: 18px; height: 18px; flex: none; }
+
+/* rules */
+#rules { max-width: 860px; margin: 0 auto; padding: 24px 18px 60px; }
+#rules h1 { font-family: var(--display); font-weight: 400; font-size: 34px; margin: 18px 0 4px; }
+#rules .lede { color: var(--muted); margin: 0 0 24px; }
+.rules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+.rule { border: 1px solid var(--line); border-radius: 16px; padding: 16px; background: rgba(10,18,48,.85); }
+.rule h2 { margin: 0 0 8px; font-size: 17px; display: flex; gap: 10px; align-items: center; }
+.rule h2 .n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-family: var(--display); font-weight: 400; font-size: 14px; border: 1.5px solid var(--blue); color: var(--blue); flex: none; }
+.rule:nth-child(even) h2 .n { border-color: var(--pink); color: var(--pink); }
+.rule p, .rule li { color: #c7d2f2; font-size: 14px; margin: 0 0 6px; }
+.rule ul { margin: 0; padding-left: 18px; }
+
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--deck-2); border: 1px solid var(--line); padding: 10px 16px; border-radius: 10px; z-index: 50; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-spiral" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M12 12m0 0a1.5 1.5 0 1 1 1.5 1.5a3.2 3.2 0 0 1-3.2-3.2a4.9 4.9 0 0 1 4.9-4.9a6.6 6.6 0 0 1 6.6 6.6a8.3 8.3 0 0 1-8.3 8.3A9.6 9.6 0 0 1 3 10.4"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5-4.9-4.6 6.6-.8z"/></symbol>
+</svg>
+
+<!-- ============ HOME ============ -->
+<main id="home" class="hidden">
+  <div class="home-wrap">
+    <div class="logo" aria-label="Word Path">
+      <div class="logo-row"><span class="tile blue">W</span><span class="tile blue">O</span><span class="tile blue">R</span><span class="tile blue">D</span></div>
+      <div class="logo-row second"><span class="tile pink">P</span><span class="tile pink">A</span><span class="tile pink">T</span><span class="tile pink">H</span></div>
+      <p class="tagline">Two players. One 26 × 26 board. First to wire their start to their end wins.</p>
+    </div>
+    <div class="home-cards">
+      <section class="card create">
+        <h2>Start a game</h2>
+        <p>You'll get a link to send to a friend. You play blue, A5 to Z22.</p>
+        <div class="field"><label for="name-create">Your name</label><input id="name-create" class="input" maxlength="20" placeholder="e.g. Cody" autocomplete="nickname"></div>
+        <button class="btn primary" id="btn-create">Create game</button>
+        <p class="form-error" id="create-error"></p>
+      </section>
+      <section class="card join">
+        <h2>Join with a code</h2>
+        <p>Got a five-letter code from a friend? Enter it here.</p>
+        <div class="field"><label for="name-join">Your name</label><input id="name-join" class="input" maxlength="20" placeholder="e.g. Sam" autocomplete="nickname"></div>
+        <div class="field"><label for="code-join">Game code</label><input id="code-join" class="input code-input" maxlength="8" placeholder="ABCDE" autocomplete="off" spellcheck="false"></div>
+        <button class="btn magenta" id="btn-join">Join game</button>
+        <p class="form-error" id="join-error"></p>
+      </section>
+    </div>
+    <nav class="home-links"><a href="/rules" data-nav>How to play</a><a href="/demo" data-nav>Watch a winning board</a></nav>
+  </div>
+</main>
+
+<!-- ============ GAME / DEMO ============ -->
+<div id="game" class="hidden">
+  <header class="topbar">
+    <a href="/" class="wordmark" data-nav><span>WORD</span> <span>PATH</span></a>
+    <div class="spacer"></div>
+    <div class="room-chip" id="room-chip"></div>
+    <a href="/rules" class="btn small" data-nav>Rules</a>
+  </header>
+  <div class="arena">
+    <aside class="panel p1" id="panel-p1"></aside>
+    <section class="board-col">
+      <div class="board-wrap" id="board-wrap">
+        <div class="board" id="board" role="grid" aria-label="Game board"></div>
+        <svg class="path-svg" id="path-svg"></svg>
+        <div id="board-overlay"></div>
+      </div>
+      <div class="hud" id="hud">
+        <div id="banner"></div>
+        <div class="status" id="status"></div>
+        <div class="formed" id="formed"></div>
+        <div class="rack" id="rack"></div>
+        <div class="controls" id="controls"></div>
+        <div id="mode-box"></div>
+      </div>
+    </section>
+    <aside class="panel p2" id="panel-p2"></aside>
+  </div>
+</div>
+
+<!-- ============ RULES ============ -->
+<div id="rules-page" class="hidden">
+  <header class="topbar">
+    <a href="/" class="wordmark" data-nav><span>WORD</span> <span>PATH</span></a>
+    <div class="spacer"></div>
+    <a href="/" class="btn small" data-nav>Play</a>
+  </header>
+  <div id="rules">
+    <h1>How to play</h1>
+    <p class="lede">Connect words. Claim tiles. Reach your end square before your opponent reaches theirs.</p>
+    <div class="rules-grid">
+      <section class="rule"><h2><span class="n">1</span>Setup</h2>
+        <p>Two players share a 26 × 26 board. Rows run A–Z from bottom to top, columns 1–26 from left to right.</p>
+        <p>Blue starts on A5 and must reach Z22. Magenta starts on A22 and must reach Z5.</p>
+        <p>Each player has 18 inventory spaces and 18 letters. Every starting rack can make at least one 6-letter and one 8-letter word.</p></section>
+      <section class="rule"><h2><span class="n">2</span>Opening phase</h2>
+        <p>Both players get 35 seconds at the same time to build the longest word they can, in a straight line.</p>
+        <p>One letter, your master letter, must sit on your start square. Whoever builds the longer word moves first; ties are broken at random. Your first word is locked for the rest of the game.</p></section>
+      <section class="rule"><h2><span class="n">3</span>Turn flow</h2>
+        <p>Each turn lasts 35 seconds. Choose one: play a word, exchange tiles, delete one of your words, or pass.</p>
+        <p>New words run left-to-right or bottom-to-top, with no gaps, and must touch your existing tiles. You can build through letters already on the board. Every word your tiles form must be real.</p>
+        <p>After you play, your rack refills to your inventory size.</p></section>
+      <section class="rule"><h2><span class="n">4</span>Tile exchange</h2>
+        <ul><li>Trade 2 tiles for 1 random tile: inventory shrinks by 1.</li><li>Trade 3 tiles for 1 letter you choose: inventory shrinks by 2.</li></ul>
+        <p>Lost space doesn't come back on its own.</p></section>
+      <section class="rule"><h2><span class="n">5</span>Special squares</h2>
+        <p><svg width="16" height="16" style="color:var(--violet);vertical-align:-3px"><use href="#i-spiral"/></svg> Purple spiral: cover it with a new tile to gain +1 inventory space (up to 24).</p>
+        <p><svg width="16" height="16" style="color:var(--gold);vertical-align:-3px"><use href="#i-star"/></svg> Gold star: cover it to gain a wild tile that can be any letter.</p>
+        <p>Each special square works once.</p></section>
+      <section class="rule"><h2><span class="n">6</span>Path and words</h2>
+        <p>Your path is a chain of your tiles touching up, down, left or right. Diagonals don't count, and there can be no gaps.</p></section>
+      <section class="rule"><h2><span class="n">7</span>Shared board</h2>
+        <p>Build near, across, or through your opponent's words. A tile used in both players' words becomes shared and counts toward both paths.</p></section>
+      <section class="rule"><h2><span class="n">8</span>Deleting words</h2>
+        <p>Remove any word you played except your first. Tiles still used by another word stay. If deleting cuts your route, you'll need to reconnect before you can win.</p></section>
+      <section class="rule"><h2><span class="n">9</span>Win condition</h2>
+        <p>The first player whose tiles form an unbroken path from their start square to their end square wins, and the current runs through it.</p></section>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden" role="status"></div>
+
+<script src="/lib/engine.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = (s) => document.querySelector(s);
+const ROWS = WP.ROWS;
+const N = WP.CONFIG.BOARD_SIZE;
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ------------------------------------------------------------------ identity
+// One seat token per browser tab (so two tabs can play each other), remembered per room for resuming.
+function tabToken() {
+  let t = sessionStorage.getItem('wp_tab_token');
+  if (!t) { t = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now()); sessionStorage.setItem('wp_tab_token', t); }
+  return t;
+}
+const seats = {
+  all() { try { return JSON.parse(localStorage.getItem('wp_seats') || '{}'); } catch { return {}; } },
+  get(code) { return this.all()[code] || null; },
+  save(code, token, name) { const a = this.all(); a[code] = { token, name, at: Date.now() }; try { localStorage.setItem('wp_seats', JSON.stringify(a)); } catch {} },
+};
+const savedName = () => { try { return localStorage.getItem('wp_name') || ''; } catch { return ''; } };
+const saveName = (n) => { try { localStorage.setItem('wp_name', n); } catch {} };
+
+// --------------------------------------------------------------------- state
+const S = {
+  route: 'home', code: null, token: tabToken(), seat: null, spectator: false, demo: false,
+  state: null, offset: 0, preview: [], cursor: null, dir: 'horizontal',
+  mode: 'place', selTile: null, exSel: [], delWord: null, error: '', busy: false,
+  dict: null, lastPopAt: 0, pollTimer: null, joinNeeded: false,
+};
+
+// ----------------------------------------------------------------------- api
+async function api(method, body, query = '') {
+  const res = await fetch(`/api/room${query}`, {
+    method, headers: { 'Content-Type': 'application/json', 'x-player-token': S.token },
+    body: method === 'POST' ? JSON.stringify(body) : undefined,
+  });
+  let data;
+  try { data = await res.json(); } catch { throw new Error(`Server returned ${res.status}. Is the API deployed?`); }
+  if (data.serverNow) S.offset = data.serverNow - Date.now();
+  return data;
+}
+const now = () => Date.now() + S.offset;
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 2200);
+}
+
+// -------------------------------------------------------------------- router
+function navigate(path, replace) {
+  if (replace) history.replaceState({}, '', path); else history.pushState({}, '', path);
+  route();
+}
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[data-nav]');
+  if (a && !e.metaKey && !e.ctrlKey) { e.preventDefault(); navigate(a.getAttribute('href')); }
+});
+window.addEventListener('popstate', route);
+
+function show(id) { for (const x of ['home', 'game', 'rules-page']) $('#' + x).classList.toggle('hidden', x !== id); }
+
+function route() {
+  stopPolling();
+  const p = location.pathname.replace(/\/+$/, '') || '/';
+  const m = /^\/play\/([A-Za-z0-9]+)$/.exec(p);
+  Object.assign(S, { state: null, preview: [], cursor: null, mode: 'place', selTile: null, exSel: [], delWord: null, error: '', seat: null, spectator: false, demo: false, joinNeeded: false });
+  if (p === '/rules') { show('rules-page'); document.title = 'Rules · Word Path'; window.scrollTo(0, 0); return; }
+  if (p === '/demo') { show('game'); document.title = 'Demo · Word Path'; enterDemo(); return; }
+  if (m) { show('game'); enterRoom(m[1].toUpperCase()); return; }
+  show('home'); document.title = 'Word Path'; enterHome();
+}
+
+// ---------------------------------------------------------------------- home
+function enterHome() {
+  const n = savedName();
+  $('#name-create').value = n; $('#name-join').value = n;
+  const q = new URLSearchParams(location.search).get('code');
+  if (q) $('#code-join').value = q.toUpperCase();
+}
+$('#btn-create').addEventListener('click', async () => {
+  const name = $('#name-create').value.trim();
+  $('#create-error').textContent = '';
+  if (!name) { $('#create-error').textContent = 'Enter your name so your friend knows who invited them.'; $('#name-create').focus(); return; }
+  saveName(name);
+  $('#btn-create').disabled = true;
+  try {
+    const data = await api('POST', { action: 'create', name });
+    if (!data.ok) throw new Error(data.error);
+    seats.save(data.state.id, S.token, name);
+    navigate(`/play/${data.state.id}`);
+  } catch (err) { $('#create-error').textContent = err.message; }
+  finally { $('#btn-create').disabled = false; }
+});
+async function joinFromHome() {
+  const name = $('#name-join').value.trim();
+  const code = $('#code-join').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  $('#join-error').textContent = '';
+  if (!name) { $('#join-error').textContent = 'Enter your name first.'; $('#name-join').focus(); return; }
+  if (!code) { $('#join-error').textContent = 'Enter the game code your friend sent you.'; $('#code-join').focus(); return; }
+  saveName(name);
+  $('#btn-join').disabled = true;
+  try {
+    const data = await api('POST', { action: 'join', code, name });
+    if (!data.ok) throw new Error(data.error);
+    if (data.seat) seats.save(code, S.token, name);
+    navigate(`/play/${code}`);
+  } catch (err) { $('#join-error').textContent = err.message; }
+  finally { $('#btn-join').disabled = false; }
+}
+$('#btn-join').addEventListener('click', joinFromHome);
+$('#code-join').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinFromHome(); });
+$('#name-create').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-create').click(); });
+
+// ---------------------------------------------------------------------- room
+async function enterRoom(code) {
+  S.code = code;
+  document.title = `${code} · Word Path`;
+  buildBoard();
+  loadDictionary();
+  // If this tab has no seat but this browser held one in this room, quietly resume it.
+  const saved = seats.get(code);
+  try {
+    let data = await api('GET', null, `?code=${code}`);
+    if (!data.ok) throw new Error(data.error);
+    if (!data.seat && saved && saved.token !== S.token) {
+      S.token = saved.token; sessionStorage.setItem('wp_tab_token', saved.token);
+      const again = await api('GET', null, `?code=${code}`);
+      if (again.ok && again.seat) data = again; else { S.token = tabToken(); }
+    }
+    applyServer(data);
+    if (!S.seat) S.joinNeeded = !S.state.players.p2;
+    S.spectator = !S.seat && !S.joinNeeded;
+    render();
+    startPolling();
+  } catch (err) {
+    S.state = null; render();
+    $('#board-overlay').innerHTML = overlayCard(`<section class="card"><h2>Game not found</h2><p>${esc(err.message)} Check the code, or start a new game.</p><a class="btn primary" href="/" data-nav style="text-align:center;text-decoration:none">Back to home</a></section>`);
+  }
+}
+
+function applyServer(data) {
+  if (!data || data.unchanged) return false;
+  const prev = S.state;
+  S.state = data.state;
+  if (data.seat) S.seat = data.seat;
+  // Drop preview tiles that no longer make sense (board filled, tile gone, phase changed).
+  const rackIds = new Set((S.state.me ? S.state.me.rack : []).map((t) => t.id));
+  S.preview = S.preview.filter((p) => !S.state.board[p.key] && rackIds.has(p.tileId));
+  if (!canAct()) S.preview = [];
+  S.exSel = S.exSel.filter((id) => rackIds.has(id));
+  if (S.delWord && !S.state.words[S.delWord]) S.delWord = null;
+  if (prev && prev.status !== S.state.status) { S.mode = 'place'; S.cursor = null; S.error = ''; }
+  if (!S.cursor && canAct() && S.state.status === 'opening') S.cursor = S.state.players[S.seat].startCoord;
+  return true;
+}
+
+function startPolling() {
+  stopPolling();
+  const tickPoll = async () => {
+    if (!S.code || S.demo) return;
+    try {
+      const data = await api('GET', null, `?code=${S.code}&v=${S.state ? S.state.version : 0}`);
+      if (data.ok && applyServer(data)) render();
+    } catch {}
+    S.pollTimer = setTimeout(tickPoll, document.hidden ? 4000 : 1000);
+  };
+  S.pollTimer = setTimeout(tickPoll, 1000);
+}
+function stopPolling() { clearTimeout(S.pollTimer); S.pollTimer = null; }
+
+async function send(action, extra = {}) {
+  if (S.busy) return;
+  S.busy = true; S.error = ''; renderHud();
+  try {
+    const data = await api('POST', { action, code: S.code, ...extra });
+    if (data.state) applyServer(data);
+    if (!data.ok) S.error = data.error || 'That move was rejected.';
+    else { S.preview = []; S.selTile = null; S.exSel = []; S.delWord = null; S.mode = 'place'; }
+    return data;
+  } catch (err) { S.error = err.message; }
+  finally { S.busy = false; render(); }
+}
+
+function loadDictionary() {
+  if (S.dict || loadDictionary.p) return;
+  loadDictionary.p = fetch('/words.txt').then((r) => r.text()).then((t) => { S.dict = WP.buildDictionary(t); renderBoard(); renderHud(); }).catch(() => {});
+}
+
+// ---------------------------------------------------------------------- demo
+function enterDemo() {
+  S.demo = true; S.code = null;
+  buildBoard();
+  const room = WP.buildDemoRoom();
+  const st = WP.publicState(room, null);
+  st.lastMove = null;
+  S.state = st;
+  render();
+}
+
+// --------------------------------------------------------------- game helpers
+const me = () => (S.state && S.seat ? S.state.players[S.seat] : null);
+const myRack = () => (S.state && S.state.me ? S.state.me.rack : []);
+function canAct() {
+  const st = S.state;
+  if (!st || !S.seat || S.demo) return false;
+  if (st.status === 'opening') return !st.players[S.seat].openingSubmitted && now() < st.openingDeadline;
+  if (st.status === 'turn') return st.currentTurnPlayerId === S.seat;
+  return false;
+}
+function cellLetter(k) {
+  const p = S.preview.find((x) => x.key === k);
+  if (p) return p.letter;
+  return S.state.board[k] ? S.state.board[k].letter : null;
+}
+function boardForPhase() { return S.state.status === 'opening' ? {} : S.state.board; }
+
+function previewCheck() {
+  if (!S.preview.length || !S.state || !S.seat) return null;
+  if (!S.dict) return { pending: true };
+  const p = S.state.players[S.seat];
+  const room = { players: { [S.seat]: { ...p, rack: myRack() } }, board: S.state.board };
+  return WP.validatePlacement(room, S.seat, S.preview.map((x) => ({ tileId: x.tileId, key: x.key, letter: x.letter })), S.dict, { board: boardForPhase() });
+}
+
+function stepFrom(key, dir, sign = 1) {
+  const p = WP.rc(key); const d = WP.DIRS[dir];
+  return WP.keyOf(p.r + d.dr * sign, p.c + d.dc * sign);
+}
+function nextFree(key) {
+  let k = key;
+  while (k && (cellLetter(k) && S.state.board[k] || S.preview.some((p) => p.key === k))) k = stepFrom(k, S.dir);
+  return k;
+}
+function addPreview(tile, key, letter) {
+  if (!key || S.state.board[key] && S.state.status !== 'opening' || S.preview.some((p) => p.key === key)) return false;
+  if (S.state.status === 'opening' && S.state.board[key]) return false;
+  let l = tile.letter;
+  if (tile.isWild) {
+    l = (letter || prompt('Wild tile: which letter should it be?', '') || '').trim().toUpperCase().slice(0, 1);
+    if (!/^[A-Z]$/.test(l)) return false;
+  }
+  S.preview.push({ tileId: tile.id, key, letter: l, wild: !!tile.isWild });
+  S.cursor = stepFrom(key, S.dir) ? nextFree(stepFrom(key, S.dir)) || key : key;
+  S.error = '';
+  return true;
+}
+const usedIds = () => new Set(S.preview.map((p) => p.tileId));
+
+// -------------------------------------------------------------------- board
+const cells = {};
+let boardBuilt = false;
+function buildBoard() {
+  if (boardBuilt) return;
+  boardBuilt = true;
+  const b = $('#board');
+  const frag = document.createDocumentFragment();
+  const lbl = (txt) => { const d = document.createElement('div'); d.className = 'lbl'; d.textContent = txt; return d; };
+  for (let gr = 0; gr < 28; gr++) {
+    for (let gc = 0; gc < 28; gc++) {
+      const isRowLabel = gc === 0 || gc === 27, isColLabel = gr === 0 || gr === 27;
+      if (isRowLabel && isColLabel) { frag.appendChild(lbl('')); continue; }
+      if (isColLabel) { frag.appendChild(lbl(String(gc))); continue; }
+      const r = N - gr; // grid row 1 → row Z (index 25)
+      if (isRowLabel) { frag.appendChild(lbl(ROWS[r])); continue; }
+      const key = WP.keyOf(r, gc - 1);
+      const d = document.createElement('div');
+      d.className = 'cell'; d.dataset.key = key; d.setAttribute('role', 'gridcell'); d.setAttribute('aria-label', key);
+      d._base = 'cell' + (gc === 1 ? ' edge-l' : '') + (gr === 1 ? ' edge-t' : '');
+      cells[key] = d;
+      frag.appendChild(d);
+    }
+  }
+  b.appendChild(frag);
+  b.addEventListener('click', onCellClick);
+  b.addEventListener('contextmenu', (e) => {
+    const c = e.target.closest('.cell'); if (!c) return;
+    const i = S.preview.findIndex((p) => p.key === c.dataset.key);
+    if (i >= 0) { e.preventDefault(); S.preview.splice(i, 1); renderBoard(); renderHud(); }
+  });
+  window.addEventListener('resize', () => drawPath());
+}
+
+const MARKS = {};
+for (const pid of WP.PLAYER_IDS) { MARKS[WP.PLAYERS[pid].start] = { pid, kind: 'start' }; MARKS[WP.PLAYERS[pid].end] = { pid, kind: 'end' }; }
+
+function renderBoard() {
+  if (!boardBuilt) return;
+  const st = S.state;
+  const check = previewCheck();
+  const previewOk = check && check.ok;
+  const lastPop = st && st.lastMove && st.lastMove.at !== S.lastPopAt ? st.lastMove : null;
+  const pathIdx = {};
+  if (st && st.winningPathCoords) st.winningPathCoords.forEach((k, i) => (pathIdx[k] = i));
+  const delKeys = new Set(S.delWord && st.words[S.delWord] ? st.words[S.delWord].coords : []);
+  const showCursor = canAct() && S.mode === 'place';
+  const lockedOpening = {};
+  if (st && st.status === 'opening' && st.me && st.me.openingSubmission) {
+    for (const pl of st.me.openingSubmission.placements) {
+      const t = st.me.rack.find((x) => x.id === pl.tileId);
+      lockedOpening[pl.key] = pl.letter || (t && t.letter) || '?';
+    }
+  }
+
+  for (const key in cells) {
+    const el = cells[key];
+    let cls = el._base;
+    let html = '';
+    const cell = st && st.board[key];
+    const prev = S.preview.find((p) => p.key === key);
+    const sp = st && st.specials[key];
+    const mark = MARKS[key];
+
+    if (mark) {
+      cls += ` m-${mark.pid} m-${mark.kind}`;
+      if (!cell && !prev) html += `<span class="mark"></span><span class="mark-lbl">${key}</span>`;
+      else html += '<span class="mark"></span>';
+    }
+    if (sp && !sp.consumedBy && !cell && !prev) {
+      cls += sp.type === 'inventory_plus' ? ' special-inv' : ' special-star';
+      html += sp.type === 'inventory_plus'
+        ? '<svg class="sp inv" aria-label="Inventory square"><use href="#i-spiral"/></svg>'
+        : '<svg class="sp star" aria-label="Wild star square"><use href="#i-star"/></svg>';
+    }
+    if (cell) {
+      const o = cell.ownerIds || [];
+      cls += o.length > 1 ? ' own-both' : o[0] === 'p1' ? ' own-p1' : o[0] === 'p2' ? ' own-p2' : '';
+      html += `<span class="t${cell.wild ? ' wild' : ''}">${cell.letter}</span>`;
+      if (lastPop && lastPop.keys && lastPop.keys.includes(key)) cls += ' pop';
+      if (key in pathIdx) cls += ' path';
+      if (delKeys.has(key)) cls += ' del-pick';
+    } else if (lockedOpening[key]) {
+      cls += ` own-${S.seat} locked`;
+      html += `<span class="t">${lockedOpening[key]}</span>`;
+    } else if (prev) {
+      cls += ' preview' + (check && !check.pending ? (previewOk ? ' ok' : ' bad') : '');
+      html += `<span class="t">${prev.letter}</span>`;
+    }
+    if (showCursor && S.cursor === key) cls += ' cursor';
+
+    if (el._cls !== cls) { el.className = cls; el._cls = cls; }
+    if (el._html !== html) { el.innerHTML = html; el._html = html; }
+    if (key in pathIdx) el.style.setProperty('--i', pathIdx[key]); else if (el.style.length) el.style.removeProperty('--i');
+    el.dataset.arrow = S.dir === 'horizontal' ? '→' : '↑';
+  }
+  if (lastPop) { S.lastPopAt = lastPop.at; setTimeout(() => { for (const k of lastPop.keys || []) if (cells[k]) { cells[k].classList.remove('pop'); cells[k]._cls = cells[k].className; } }, 500); }
+  drawPath();
+}
+
+function drawPath() {
+  const svg = $('#path-svg');
+  const st = S.state;
+  const path = st && st.winningPathCoords;
+  if (!path || !path.length) { svg.innerHTML = ''; svg._for = null; return; }
+  const board = $('#board');
+  const sig = path.join(',') + board.offsetWidth;
+  if (svg._for === sig) return;
+  svg._for = sig;
+  const color = st.winnerId === 'p2' ? 'var(--pink)' : 'var(--blue)';
+  // cells are position:relative, so their offsets are already measured from .board-wrap
+  const pts = path.map((k) => { const c = cells[k]; return [c.offsetLeft + c.offsetWidth / 2, c.offsetTop + c.offsetHeight / 2]; });
+  let len = 0;
+  for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  const w = $('#board-wrap');
+  svg.setAttribute('width', w.offsetWidth); svg.setAttribute('height', w.offsetHeight);
+  svg.style.setProperty('--len', Math.ceil(len));
+  const d = pts.map((p) => p.join(',')).join(' ');
+  const cw = cells[path[0]].offsetWidth;
+  svg.innerHTML = `
+    <polyline class="glow" points="${d}" stroke="${color}" stroke-width="${cw * 0.9}"/>
+    <polyline class="core" points="${d}"/>
+    <polyline class="pulse" points="${d}" stroke="#fff"/>
+    <circle cx="${pts[0][0]}" cy="${pts[0][1]}" r="${cw * 0.75}" fill="none" stroke="${color}" stroke-width="2" opacity=".9"/>
+    <circle cx="${pts.at(-1)[0]}" cy="${pts.at(-1)[1]}" r="${cw * 0.75}" fill="none" stroke="${color}" stroke-width="2" opacity=".9"/>`;
+}
+
+function onCellClick(e) {
+  const c = e.target.closest('.cell'); if (!c) return;
+  const key = c.dataset.key;
+  const st = S.state; if (!st) return;
+  if (S.mode === 'delete' && st.status === 'turn' && st.currentTurnPlayerId === S.seat) {
+    const mine = (st.board[key] ? st.board[key].wordIds : []).map((id) => st.words[id]).filter((w) => w && w.playerId === S.seat && !w.lockedFirstWord);
+    if (!mine.length) { S.error = st.board[key] ? 'Pick one of your own words (your first word is locked).' : 'Pick a tile that belongs to one of your words.'; renderHud(); return; }
+    const at = mine.findIndex((w) => w.id === S.delWord);
+    S.delWord = mine[(at + 1) % mine.length].id;
+    S.error = ''; renderBoard(); renderHud(); return;
+  }
+  if (!canAct() || S.mode !== 'place') return;
+  const pi = S.preview.findIndex((p) => p.key === key);
+  if (pi >= 0) { S.preview.splice(pi, 1); S.cursor = key; render(); return; }
+  if (S.selTile) {
+    const t = myRack().find((x) => x.id === S.selTile);
+    if (t && !boardForPhase()[key] && addPreview(t, key)) S.selTile = null;
+    render(); return;
+  }
+  if (S.cursor === key) S.dir = S.dir === 'horizontal' ? 'vertical' : 'horizontal';
+  else S.cursor = key;
+  renderBoard(); renderControls();
+}
+
+// keyboard play
+document.addEventListener('keydown', (e) => {
+  if ($('#game').classList.contains('hidden') || !canAct() || S.mode !== 'place') return;
+  if (e.target.matches('input, select, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key;
+  if (/^[a-zA-Z]$/.test(k)) {
+    if (!S.cursor) return;
+    const L = k.toUpperCase();
+    const used = usedIds();
+    const rack = myRack().filter((t) => !used.has(t.id));
+    const tile = rack.find((t) => !t.isWild && t.letter === L) || rack.find((t) => t.isWild);
+    const target = nextFree(S.cursor);
+    if (!tile) { S.error = `No ${L} in your rack.`; renderHud(); return; }
+    if (!target || boardForPhase()[target]) { S.error = 'That runs off the board. Start the word further back.'; renderHud(); return; }
+    addPreview(tile, target, L);
+    e.preventDefault(); render();
+  } else if (k === 'Backspace') {
+    const last = S.preview.pop();
+    if (last) { S.cursor = last.key; e.preventDefault(); render(); }
+  } else if (k === 'Enter') { e.preventDefault(); submitWord(); }
+  else if (k === 'Escape') { S.preview = []; S.selTile = null; render(); }
+  else if (k === ' ' || k === 'Tab') { e.preventDefault(); S.dir = S.dir === 'horizontal' ? 'vertical' : 'horizontal'; renderBoard(); renderControls(); }
+  else if (k.startsWith('Arrow') && S.cursor) {
+    const p = WP.rc(S.cursor);
+    const nk = { ArrowUp: WP.keyOf(p.r + 1, p.c), ArrowDown: WP.keyOf(p.r - 1, p.c), ArrowLeft: WP.keyOf(p.r, p.c - 1), ArrowRight: WP.keyOf(p.r, p.c + 1) }[k];
+    if (nk) { S.cursor = nk; e.preventDefault(); renderBoard(); }
+  }
+});
+
+function submitWord() {
+  if (!S.preview.length) { S.error = 'Place some tiles first.'; renderHud(); return; }
+  const placements = S.preview.map((p) => ({ tileId: p.tileId, key: p.key, ...(p.wild ? { letter: p.letter } : {}) }));
+  send(S.state.status === 'opening' ? 'submit_opening' : 'place', { placements });
+}
+
+// -------------------------------------------------------------------- panels
+function fmtTime(ms) { const s = Math.max(0, Math.ceil(ms / 1000)); return `0:${String(s).padStart(2, '0')}`; }
+function renderPanel(pid) {
+  const el = $('#panel-' + pid);
+  const st = S.state;
+  const p = st && st.players[pid];
+  const def = WP.PLAYERS[pid];
+  if (!p) {
+    el.className = `panel ${pid}`;
+    el.innerHTML = `<div class="panel-head"><div class="avatar">${pid === 'p1' ? '1' : '2'}</div><div><div class="pname" style="color:var(--muted)">Waiting for player…</div><div class="proute">${def.start} → ${def.end}</div></div></div>`;
+    return;
+  }
+  const active = (st.status === 'turn' && st.currentTurnPlayerId === pid) || (st.status === 'opening' && !p.openingSubmitted);
+  el.className = `panel ${pid}${active && st.status !== 'finished' ? ' active' : ''}`;
+  const meter = Array.from({ length: WP.CONFIG.MAX_CAPACITY }, (_, i) => `<i class="${i < p.rackCount && i < p.capacity ? 'full' : i < p.capacity ? 'cap' : ''}"></i>`).join('');
+  let reach;
+  if (p.connectedToEnd) reach = `<div class="reach win"><b>Connected ${p.startCoord} → ${p.endCoord}</b></div>`;
+  else if (p.reach && p.reach.anchored) reach = `<div class="reach">Network reaches row <b>${p.reach.bestRow}</b> of Z · ${p.reach.size} tiles</div>`;
+  else reach = `<div class="reach">Not anchored on <b>${p.startCoord}</b> yet</div>`;
+  let phase = '';
+  if (st.status === 'opening') phase = p.openingSubmitted ? 'Opening word locked in' : 'Building opening word';
+  else if (st.status === 'turn') phase = st.currentTurnPlayerId === pid ? 'Playing' : 'Waiting';
+  else if (st.status === 'finished') phase = st.winnerId === pid ? 'Winner' : st.winnerId ? 'Defeated' : 'Draw';
+  else phase = 'In the lobby';
+  el.innerHTML = `
+    <div class="panel-head"><div class="avatar">${esc(p.name[0] || '?').toUpperCase()}</div>
+      <div style="min-width:0"><div class="pname">${esc(p.name)}${pid === S.seat ? '<span class="you-tag">you</span>' : ''}</div><div class="proute">${p.startCoord} → ${p.endCoord}</div></div></div>
+    <div><div class="timer idle" data-timer="${pid}">${phase}</div></div>
+    <div class="stat"><div class="stat-row"><span>Inventory</span><b>${st.status === 'lobby' ? p.capacity : `${p.rackCount - p.wildTokens} / ${p.capacity}`}</b></div><div class="meter">${meter}</div></div>
+    <div class="stat-row"><span>Wild tiles</span><b>${p.wildTokens}</b></div>
+    ${reach}
+    ${pid === 'p2' ? legendHtml() + logHtml() : ''}`;
+  updateTimers();
+}
+function legendHtml() {
+  return `<div class="legend"><div><svg style="color:var(--violet)"><use href="#i-spiral"/></svg>+1 inventory space</div><div><svg style="color:var(--gold)"><use href="#i-star"/></svg>Wild tile</div></div>`;
+}
+function logHtml() {
+  const log = (S.state && S.state.log) || [];
+  return log.length ? `<div class="log">${log.slice(-6).map((l) => `<div>${esc(l.text)}</div>`).join('')}</div>` : '';
+}
+function updateTimers() {
+  const st = S.state; if (!st) return;
+  for (const pid of WP.PLAYER_IDS) {
+    const el = document.querySelector(`[data-timer="${pid}"]`); if (!el) continue;
+    let deadline = null;
+    if (st.status === 'opening' && !st.players[pid].openingSubmitted) deadline = st.openingDeadline;
+    if (st.status === 'turn' && st.currentTurnPlayerId === pid) deadline = st.turnDeadline;
+    if (deadline) {
+      const left = deadline - now();
+      el.textContent = fmtTime(left);
+      el.className = 'timer' + (left < 8000 ? ' low' : '');
+    }
+  }
+}
+setInterval(() => { updateTimers(); }, 250);
+
+// ----------------------------------------------------------------------- hud
+function renderHud() {
+  const st = S.state;
+  const statusEl = $('#status');
+  if (!st) { statusEl.innerHTML = ''; $('#formed').innerHTML = ''; $('#rack').innerHTML = ''; $('#controls').innerHTML = ''; $('#mode-box').innerHTML = ''; return; }
+  const meP = me();
+  let msg = '', sub = '';
+  if (S.demo) { msg = 'Demo board'; sub = 'Blue has wired A5 to Z22 through twelve words. Magenta is still on the way.'; }
+  else if (!S.seat) { msg = S.joinNeeded ? 'Join to take the magenta seat.' : 'You are watching this game.'; }
+  else if (st.status === 'lobby') { msg = st.players.p2 ? 'Both players are here.' : 'Waiting for your friend to join.'; }
+  else if (st.status === 'opening') {
+    if (meP.openingSubmitted) { msg = `Locked in: ${esc((st.me.openingSubmission || {}).text || '')}`; sub = 'Waiting for the other player or the timer.'; }
+    else { msg = 'Opening: build your longest word.'; sub = `One letter must sit on ${meP.startCoord}. That's your master letter. Longer word moves first.`; }
+  } else if (st.status === 'turn') {
+    if (st.currentTurnPlayerId === S.seat) {
+      msg = 'Your turn.';
+      sub = meP.firstWordId ? 'Play a word that touches your tiles, exchange, delete a word, or pass.' : `You have no first word yet. Your next word must cover ${meP.startCoord}.`;
+    } else { msg = `${esc(st.players[st.currentTurnPlayerId].name)} is playing.`; sub = 'Plan your next word while you wait.'; }
+  } else if (st.status === 'finished') {
+    msg = st.winnerId ? `${esc(st.players[st.winnerId].name)} wins.` : 'Draw.';
+  }
+  statusEl.innerHTML = `<span class="msg">${msg}</span><span class="sub">${sub}</span>${S.error ? `<span class="err">${esc(S.error)}</span>` : ''}`;
+
+  // live word check
+  const check = previewCheck();
+  const formed = $('#formed');
+  if (check && check.words && check.words.length) {
+    const bad = new Set(check.badWords || []);
+    formed.innerHTML = check.words.map((w) => `<span class="${bad.has(w.text) ? 'n' : 'y'}">${w.text} ${bad.has(w.text) ? '✗' : '✓'}</span>`).join('') +
+      (check.ok ? '' : !check.badWords ? `<span class="n">${esc(check.error)}</span>` : '');
+  } else if (check && !check.ok && check.error && !check.pending) formed.innerHTML = `<span class="n">${esc(check.error)}</span>`;
+  else formed.innerHTML = '';
+
+  renderRack();
+  renderControls();
+}
+
+function renderRack() {
+  const el = $('#rack');
+  const st = S.state;
+  if (S.demo || !S.seat || st.status === 'lobby') {
+    el.innerHTML = `<span class="rack-note">${S.demo ? 'Racks are private during real games. Each player sees only their own letters.' : S.seat ? 'Your 18 letters appear when the game starts.' : 'Player racks are private.'}</span>`;
+    return;
+  }
+  const rack = myRack();
+  const used = usedIds();
+  if (st.status === 'opening' && st.me.openingSubmission) st.me.openingSubmission.placements.forEach((p) => used.add(p.tileId));
+  const cap = me().capacity;
+  const letters = rack.filter((t) => !t.isWild).length;
+  el.innerHTML = rack.map((t) => {
+    const cls = ['tile', t.isWild ? 'wildt' : 'blue'];
+    if (S.seat === 'p2' && !t.isWild) cls[1] = 'pink';
+    if (used.has(t.id)) cls.push('used');
+    if (S.selTile === t.id) cls.push('sel');
+    if (S.exSel.includes(t.id)) cls.push('ex');
+    return `<button class="${cls.join(' ')}" data-tile="${t.id}" ${used.has(t.id) ? 'disabled' : ''} aria-label="${t.isWild ? 'Wild tile' : 'Letter ' + t.letter}">${t.isWild ? '★' : t.letter}</button>`;
+  }).join('') + Array.from({ length: Math.max(0, cap - letters) }, () => '<span class="empty-slot"></span>').join('');
+}
+$('#rack').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-tile]'); if (!b || !S.state) return;
+  const id = b.dataset.tile;
+  if (S.mode === 'exchange') {
+    const tile = myRack().find((t) => t.id === id);
+    if (tile && tile.isWild) { S.error = 'Wild tiles cannot be exchanged.'; renderHud(); return; }
+    S.exSel = S.exSel.includes(id) ? S.exSel.filter((x) => x !== id) : [...S.exSel, id].slice(-WP.CONFIG.SPECIFIC_EXCHANGE_COST);
+  } else if (canAct()) {
+    if (S.selTile === id) S.selTile = null;
+    else if (S.cursor && !boardForPhase()[S.cursor] && !S.preview.some((p) => p.key === S.cursor)) {
+      // a cursor is waiting on an empty square: drop the tile straight there
+      const t = myRack().find((x) => x.id === id);
+      if (t) addPreview(t, S.cursor);
+    } else S.selTile = id;
+  }
+  render();
+});
+
+function renderControls() {
+  const el = $('#controls');
+  const box = $('#mode-box');
+  const st = S.state;
+  if (S.demo) {
+    el.innerHTML = `<a class="btn primary" href="/" data-nav style="text-decoration:none">Start a real game</a><a class="btn" href="/rules" data-nav style="text-decoration:none">Read the rules</a>`;
+    box.innerHTML = ''; return;
+  }
+  if (!S.seat || st.status === 'lobby' || st.status === 'finished') { el.innerHTML = ''; box.innerHTML = ''; return; }
+  const act = canAct();
+  const opening = st.status === 'opening';
+  const dirBtns = `<div class="dir-toggle" role="group" aria-label="Word direction">
+    <button data-dir="horizontal" aria-pressed="${S.dir === 'horizontal'}">→ Across</button>
+    <button data-dir="vertical" aria-pressed="${S.dir === 'vertical'}">↑ Up</button></div>`;
+  el.innerHTML = `${dirBtns}
+    <button class="btn small" data-act="shuffle">Shuffle</button>
+    <button class="btn small" data-act="clear" ${S.preview.length ? '' : 'disabled'}>Clear</button>
+    <span class="grow"></span>
+    ${opening ? '' : `<button class="btn small" data-act="exchange" ${act ? '' : 'disabled'}>Exchange</button>
+    <button class="btn small" data-act="delete" ${act ? '' : 'disabled'}>Delete a word</button>
+    <button class="btn small" data-act="pass" ${act ? '' : 'disabled'}>Pass</button>`}
+    <button class="btn ${S.seat === 'p2' ? 'magenta' : 'primary'}" data-act="submit" ${act && S.preview.length && !S.busy ? '' : 'disabled'}>${opening ? 'Lock in opening word' : 'Play word'}</button>`;
+
+  if (S.mode === 'exchange') {
+    const n = S.exSel.length;
+    box.innerHTML = `<div class="mode-box"><span class="hint">Select tiles in your rack (${n} chosen).</span>
+      <button class="btn small" data-act="ex-random" ${n === WP.CONFIG.RANDOM_EXCHANGE_COST ? '' : 'disabled'}>Trade ${WP.CONFIG.RANDOM_EXCHANGE_COST} for a random tile (−${WP.CONFIG.RANDOM_EXCHANGE_CAPACITY_LOSS} space)</button>
+      <select id="ex-letter" aria-label="Letter to receive">${ROWS.split('').map((l) => `<option>${l}</option>`).join('')}</select>
+      <button class="btn small" data-act="ex-specific" ${n === WP.CONFIG.SPECIFIC_EXCHANGE_COST ? '' : 'disabled'}>Trade ${WP.CONFIG.SPECIFIC_EXCHANGE_COST} for this letter (−${WP.CONFIG.SPECIFIC_EXCHANGE_CAPACITY_LOSS} spaces)</button>
+      <button class="btn small" data-act="cancel">Cancel</button></div>`;
+  } else if (S.mode === 'delete') {
+    const w = S.delWord && st.words[S.delWord];
+    box.innerHTML = `<div class="mode-box"><span class="hint">${w ? `Delete <b>${w.text}</b>? Tiles used by other words stay.` : 'Click one of your words on the board. Click again to cycle if a tile is in two words.'}</span>
+      <button class="btn small danger" data-act="del-confirm" ${w ? '' : 'disabled'}>${w ? `Delete ${w.text}` : 'Delete word'}</button>
+      <button class="btn small" data-act="cancel">Cancel</button></div>`;
+  } else {
+    box.innerHTML = act ? `<p class="hint" style="margin:0">Click a square, then type letters. <kbd>Space</kbd> flips direction, <kbd>Backspace</kbd> undoes, <kbd>Enter</kbd> plays. Or click a rack tile, then a square. Right-click a placed tile to take it back.</p>` : '';
+  }
+}
+$('#hud').addEventListener('click', (e) => {
+  const d = e.target.closest('[data-dir]');
+  if (d) { S.dir = d.dataset.dir; renderBoard(); renderControls(); return; }
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const a = b.dataset.act;
+  if (a === 'submit') submitWord();
+  else if (a === 'clear') { S.preview = []; render(); }
+  else if (a === 'shuffle') { const r = S.state.me.rack; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } renderRack(); }
+  else if (a === 'exchange') { S.mode = 'exchange'; S.preview = []; S.exSel = []; S.error = ''; render(); }
+  else if (a === 'delete') { S.mode = 'delete'; S.preview = []; S.delWord = null; S.error = ''; render(); }
+  else if (a === 'cancel') { S.mode = 'place'; S.exSel = []; S.delWord = null; render(); }
+  else if (a === 'pass') send('pass');
+  else if (a === 'ex-random') send('exchange_random', { tileIds: S.exSel });
+  else if (a === 'ex-specific') send('exchange_specific', { tileIds: S.exSel, desiredLetter: $('#ex-letter').value });
+  else if (a === 'del-confirm') send('delete', { wordId: S.delWord });
+});
+
+// ---------------------------------------------------------------- overlays
+function overlayCard(inner) { return `<div class="board-overlay"><div class="overlay-card">${inner}</div></div>`; }
+function renderOverlay() {
+  const st = S.state;
+  const ov = $('#board-overlay');
+  const banner = $('#banner');
+  banner.innerHTML = '';
+  if (!st) { ov.innerHTML = ''; return; }
+  if (S.joinNeeded && !S.seat) {
+    ov.innerHTML = overlayCard(`<section class="card join"><h2>Join ${esc(st.players.p1 ? st.players.p1.name : 'this game')}</h2>
+      <p>You'll play magenta, from A22 to Z5.</p>
+      <div class="field"><label for="name-room">Your name</label><input id="name-room" class="input" maxlength="20" value="${esc(savedName())}"></div>
+      <button class="btn magenta" id="btn-room-join">Join game</button><p class="form-error" id="room-join-error"></p></section>`);
+    $('#btn-room-join').onclick = async () => {
+      const name = $('#name-room').value.trim();
+      if (!name) { $('#room-join-error').textContent = 'Enter your name first.'; return; }
+      saveName(name);
+      const data = await api('POST', { action: 'join', code: S.code, name });
+      if (!data.ok) { $('#room-join-error').textContent = data.error; return; }
+      if (data.seat) { seats.save(S.code, S.token, name); S.joinNeeded = false; }
+      else { S.joinNeeded = false; S.spectator = true; toast('Both seats were taken. You are watching.'); }
+      applyServer(data); render();
+    };
+    return;
+  }
+  if (st.status === 'lobby') {
+    const link = `${location.origin}/play/${st.id}`;
+    const both = st.players.p1 && st.players.p2;
+    ov.innerHTML = overlayCard(`<section class="card create"><h2>${both ? 'Ready to play' : 'Invite a friend'}</h2>
+      ${both ? '<p>The opening phase starts the moment either player presses start. You both get 35 seconds.</p>' : '<p>Send this link, or read them the code. The game starts once they join.</p>'}
+      <div class="big-code">${st.id}</div>
+      <div class="link-row"><input class="input" id="invite-link" readonly value="${link}" onfocus="this.select()"><button class="btn small" id="btn-copy">Copy link</button></div>
+      <div class="seat-list">
+        <div class="seat p1 ${st.players.p1 ? 'on' : ''}"><i></i>${st.players.p1 ? esc(st.players.p1.name) : 'Blue seat open'} · A5 → Z22</div>
+        <div class="seat p2 ${st.players.p2 ? 'on' : ''}"><i></i>${st.players.p2 ? esc(st.players.p2.name) : 'Magenta seat open'} · A22 → Z5</div>
+      </div>
+      ${S.seat ? `<button class="btn primary" id="btn-start" ${both ? '' : 'disabled'}>${both ? 'Start game' : 'Waiting for player 2…'}</button>` : ''}</section>`);
+    $('#btn-copy').onclick = async () => {
+      try { await navigator.clipboard.writeText(link); toast('Invite link copied.'); }
+      catch { $('#invite-link').select(); document.execCommand('copy'); toast('Invite link copied.'); }
+    };
+    const sb = $('#btn-start'); if (sb) sb.onclick = () => send('start');
+    return;
+  }
+  ov.innerHTML = '';
+  if (st.status === 'finished' || S.demo) {
+    const w = st.winnerId;
+    const col = w === 'p2' ? 'var(--pink)' : w ? 'var(--blue)' : 'var(--muted)';
+    const title = w ? `${esc(st.players[w].name)} connects ${st.players[w].startCoord} → ${st.players[w].endCoord}` : 'Draw';
+    const sub = w ? `${st.winningPathCoords.length} tiles carry the current.` : 'Too many passes in a row.';
+    const btns = S.demo ? '' : `<div class="row">${S.seat ? '<button class="btn small" id="btn-rematch">Play again</button>' : ''}<a class="btn small" href="/" data-nav style="text-decoration:none">Home</a></div>`;
+    banner.innerHTML = `<div class="banner" style="--bc:${col}"><h3>${title}</h3><p>${sub}</p>${btns}</div>`;
+    const rb = $('#btn-rematch'); if (rb) rb.onclick = () => send('start');
+  }
+}
+
+function renderRoomChip() {
+  const el = $('#room-chip');
+  if (S.demo) { el.innerHTML = 'Demo board'; return; }
+  if (!S.code) { el.innerHTML = ''; return; }
+  el.innerHTML = `Game <b>${S.code}</b> <button class="btn small" id="chip-copy">Copy invite</button>`;
+  $('#chip-copy').onclick = async () => { try { await navigator.clipboard.writeText(`${location.origin}/play/${S.code}`); toast('Invite link copied.'); } catch { toast(`${location.origin}/play/${S.code}`); } };
+}
+
+function render() {
+  renderRoomChip();
+  renderPanel('p1'); renderPanel('p2');
+  renderBoard();
+  renderHud();
+  renderOverlay();
+}
+
+route();
+})();
+</script>
+</body>
+</html>

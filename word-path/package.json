@@ -1,0 +1,11 @@
+{
+  "name": "word-path",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Two-player neon word path game. Static front end + one Vercel function + Upstash Redis.",
+  "scripts": {
+    "local": "node dev-server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": "22.x" }
+}
